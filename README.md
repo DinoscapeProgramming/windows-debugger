@@ -4,11 +4,11 @@ A lightweight Node.js REPL debugger for **Windows** that spawns a PowerShell win
 
 ## ✨ Features
 
-- 🔹 Windows-only debugger (uses PowerShell)
-- 🔹 Creates a **separate REPL session** connected to your Node.js process
-- 🔹 Lets you **inspect variables, run commands, and evaluate code** in real-time
-- 🔹 Provides a configurable **default return value** when no command is entered
-- 🔹 Automatically sets a **custom PowerShell window title** for your session
+- Windows-only debugger (uses PowerShell)
+- Creates a **separate REPL session** connected to your Node.js process
+- Lets you **inspect variables, run commands, and evaluate code** in real-time
+- Provides a configurable **default return value** when no command is entered
+- Automatically sets a **custom PowerShell window title** for your session
 
 ---
 
