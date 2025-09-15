@@ -1,8 +1,14 @@
 {
   "name": "windows-debugger",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Opens a Windows terminal window with a REPL for debugging.",
-  "main": "index.js",
+  "main": "index.cjs",
+  "exports": {
+    ".": {
+      "require": "./index.cjs",
+      "import": "./index.mjs"
+    }
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
