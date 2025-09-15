@@ -1,0 +1,47 @@
+# Build artifacts
+bin/
+obj/
+dist/
+
+# NuGet packages
+*.nupkg
+*.snupkg
+
+# Package directories
+packages/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# .NET artifacts
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Node.js (for the TypeScript version)
+node_modules/
+*.log
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+coverage/
+*.tsbuildinfo
+
+# Test results
+TestResults/
+
+# OS files
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
