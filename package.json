@@ -1,6 +1,6 @@
 {
   "name": "windows-debugger",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Opens a Windows terminal window with a REPL for debugging.",
   "main": "index.js",
   "scripts": {

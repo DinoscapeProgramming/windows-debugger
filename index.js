@@ -1,4 +1,5 @@
 const net = require("net");
+const util = require("util");
 const repl = require("repl");
 const domain = require("domain");
 const childProcess = require("child_process");
