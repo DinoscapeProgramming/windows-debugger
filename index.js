@@ -5,7 +5,7 @@ const childProcess = require("child_process");
 
 const replDomain = domain.create();
 
-module.exports = ({ title, default: defaultValue }) => replDomain.run(() => {
+module.exports = ({ title = "Windows Debugger", default: defaultValue }) => replDomain.run(() => {
   console.assert(process.platform === "win32", "This module only works on Windows.");
 
   const server = net.createServer((socket) => {
@@ -29,7 +29,7 @@ module.exports = ({ title, default: defaultValue }) => replDomain.run(() => {
     childProcess.spawn("powershell.exe", [
       "-NoExit",
       "-Command",
-      `$host.UI.RawUI.WindowTitle='LocalBotify Debugger - ${title.replace(/'/g, "''")}'; node -e '${`
+      `$host.UI.RawUI.WindowTitle='${title.replace(/'/g, "''")}'; node -e '${`
         const net = require('net');
         const socket = net.connect(${server.address().port.toString()}, 'localhost');
         socket.pipe(process.stdout);
