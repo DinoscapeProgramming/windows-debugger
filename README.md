@@ -28,7 +28,8 @@ const windowsDebugger = require("windows-debugger");
 // Start a debugger session
 windowsDebugger({
   title: "MyApp Debugger",
-  default: "Nothing entered"
+  default: "Nothing entered",
+  eval
 });
 ```
 
@@ -54,7 +55,8 @@ setInterval(() => {
 
 windowsDebugger({
   title: "Counter Debugger",
-  default: "No input"
+  default: "No input",
+  eval
 });
 ```
 
@@ -81,10 +83,11 @@ windowsDebugger({
 
 ### `windowsDebugger(options)`
 
-| Option    | Type     | Description                                                            |
-| --------- | -------- | ---------------------------------------------------------------------- |
-| `title`   | `string` | The window title for the PowerShell debugger session.                  |
-| `default` | `any`    | The default return value when pressing enter without typing a command. |
+| Option    | Type       | Description                                                            |
+| --------- | ---------- | ---------------------------------------------------------------------- |
+| `title`   | `string`   | The window title for the PowerShell debugger session.                  |
+| `default` | `any`      | The default return value when pressing enter without typing a command. |
+| `eval`    | `Function` | An `eval` function used to evaluate REPL input.                        |
 
 ---
 

@@ -6,7 +6,7 @@ const childProcess = require("child_process");
 
 const replDomain = domain.create();
 
-module.exports = ({ title = "Windows Debugger", default: defaultValue }) => replDomain.run(() => {
+module.exports = ({ title = "Windows Debugger", default: defaultValue, eval: evalFunction = eval }) => replDomain.run(() => {
   console.assert(process.platform === "win32", "This module only works on Windows.");
 
   const server = net.createServer((socket) => {
@@ -17,7 +17,7 @@ module.exports = ({ title = "Windows Debugger", default: defaultValue }) => repl
       prompt: "> ",
       eval: (command, _, __, callback) => {
         try {
-          callback(null, (command.trim()) ? eval(command) : defaultValue);
+          callback(null, (command.trim()) ? evalFunction(command) : defaultValue);
         } catch (error) {
           callback(error);
         };
