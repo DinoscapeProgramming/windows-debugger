@@ -2,6 +2,8 @@
 
 A lightweight Node.js REPL debugger for **Windows** that spawns a PowerShell window and connects to your running process for live debugging.
 
+**✨ Now with TypeScript support!** This module has been fully migrated to TypeScript for better type safety and developer experience.
+
 ## ✨ Features
 
 - Windows-only debugger (uses PowerShell)
@@ -9,6 +11,8 @@ A lightweight Node.js REPL debugger for **Windows** that spawns a PowerShell win
 - Lets you **inspect variables, run commands, and evaluate code** in real-time
 - Provides a configurable **default return value** when no command is entered
 - Automatically sets a **custom PowerShell window title** for your session
+- **TypeScript support** with full type definitions
+- **DRY code architecture** with modular, reusable components
 
 ---
 
@@ -22,6 +26,7 @@ npm install windows-debugger
 
 ## 🚀 Usage
 
+### JavaScript
 ```js
 const windowsDebugger = require("windows-debugger");
 
@@ -31,6 +36,19 @@ windowsDebugger({
   default: "Nothing entered",
   eval: (code) => eval(code)
 });
+```
+
+### TypeScript
+```typescript
+import windowsDebugger, { WindowsDebuggerOptions } from "windows-debugger";
+
+const options: WindowsDebuggerOptions = {
+  title: "MyApp Debugger",
+  default: "Nothing entered",
+  eval: (code: string) => eval(code)
+};
+
+windowsDebugger(options);
 ```
 
 When called, this will:
@@ -81,13 +99,65 @@ windowsDebugger({
 
 ## 📖 API
 
-### `windowsDebugger(options)`
+### `windowsDebugger(options?)`
 
-| Option    | Type       | Description                                                            |
-| --------- | ---------- | ---------------------------------------------------------------------- |
-| `title`   | `string`   | The window title for the PowerShell debugger session.                  |
-| `default` | `any`      | The default return value when pressing enter without typing a command. |
-| `eval`    | `Function` | An `eval` function used to evaluate REPL input.                        |
+| Option    | Type       | Default          | Description                                                            |
+| --------- | ---------- | ---------------- | ---------------------------------------------------------------------- |
+| `title`   | `string`   | `"Windows Debugger"` | The window title for the PowerShell debugger session.            |
+| `default` | `any`      | `undefined`      | The default return value when pressing enter without typing a command. |
+| `eval`    | `Function` | `eval`           | An `eval` function used to evaluate REPL input.                       |
+
+### TypeScript Interface
+
+```typescript
+interface WindowsDebuggerOptions {
+  /** The window title for the PowerShell debugger session */
+  title?: string;
+  /** The default return value when pressing enter without typing a command */
+  default?: any;
+  /** An eval function used to evaluate REPL input */
+  eval?: (command: string) => any;
+}
+```
+
+---
+
+## 🏗️ Architecture & Development
+
+### TypeScript Migration
+
+This module has been completely rewritten in TypeScript with the following improvements:
+
+- **Type Safety**: Full TypeScript support with comprehensive type definitions
+- **DRY Principles**: Modular architecture with reusable components:
+  - `PowerShellCommandBuilder`: Handles PowerShell command construction and escaping
+  - `ReplServerManager`: Manages REPL server lifecycle and socket connections
+  - `PlatformValidator`: Validates Windows platform requirement
+  - `PowerShellSpawner`: Handles PowerShell process spawning
+- **Better Error Handling**: Centralized error management with proper async/await patterns
+- **Improved Maintainability**: Clear separation of concerns and single responsibility classes
+
+### Build Process
+
+```bash
+# Build the TypeScript code
+npm run build
+
+# The compiled JavaScript will be in dist/
+# Type definitions will be available as dist/index.d.ts
+```
+
+### Source Structure
+
+```
+src/
+└── index.ts          # Main TypeScript source
+dist/
+├── index.js          # Compiled JavaScript
+├── index.js.map      # Source map
+├── index.d.ts        # Type definitions
+└── index.d.ts.map    # Type definition source map
+```
 
 ---
 

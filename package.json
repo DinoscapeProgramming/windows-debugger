@@ -3,7 +3,10 @@
   "version": "1.0.6",
   "description": "Opens a Windows terminal window with a REPL for debugging.",
   "main": "index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": "https://github.com/DinoscapeProgramming/windows-debugger",
@@ -15,9 +18,21 @@
     "terminal",
     "cmd",
     "console",
-    "shell"
+    "shell",
+    "typescript"
   ],
   "author": "DinoscapeProgramming",
   "license": "MIT",
-  "type": "commonjs"
+  "type": "commonjs",
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "@types/node": "^24.4.0",
+    "typescript": "^5.9.2"
+  }
 }
