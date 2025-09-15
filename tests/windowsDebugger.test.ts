@@ -687,8 +687,27 @@ describe('Windows Debugger', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
 
-    test('should include correct Node.js script in command', () => {
+    test('should include correct Node.js script in command', async () => {
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger();
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       const spawnCalls = spawn.mock.calls;
       const commandString = spawnCalls[0][1][2];
@@ -699,9 +718,29 @@ describe('Windows Debugger', () => {
       expect(commandString).toContain('localhost');
     });
 
-    test('should handle complex characters in title', () => {
+    test('should handle complex characters in title', async () => {
       const complexTitle = "Test'Debug\"Session&<>|";
+      
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger({ title: complexTitle });
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       const spawnCalls = spawn.mock.calls;
       const commandString = spawnCalls[0][1][2];
@@ -710,9 +749,29 @@ describe('Windows Debugger', () => {
       expect(commandString).toContain("Test''Debug");
     });
 
-    test('should handle multiple single quotes', () => {
+    test('should handle multiple single quotes', async () => {
       const weirdTitle = "A'B'C'D";
+      
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger({ title: weirdTitle });
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       const spawnCalls = spawn.mock.calls;
       const commandString = spawnCalls[0][1][2];
@@ -733,7 +792,19 @@ describe('Windows Debugger', () => {
       expect(() => windowsDebugger()).not.toThrow();
     });
 
-    test('should apply all custom options correctly', () => {
+    test('should apply all custom options correctly', async () => {
+      // Clear mocks to avoid interference from previous tests
+      jest.clearAllMocks();
+      
+      // Set up mocks again 
+      net.createServer.mockImplementation((callback?: any) => {
+        if (callback) setImmediate(() => callback(mockSocket));
+        return mockServer;
+      });
+      repl.start.mockReturnValue(mockReplServer);
+      domain.create.mockReturnValue(mockDomainInstance);
+      spawn.mockReturnValue({});
+      
       const customEval = jest.fn().mockReturnValue('custom-eval-result');
       const options: WindowsDebuggerOptions = {
         title: 'Custom Title',
@@ -741,15 +812,37 @@ describe('Windows Debugger', () => {
         eval: customEval
       };
 
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+      mockServer.address.mockReturnValue({ port: 12345 });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger(options);
 
-      // Check title was used
-      const spawnCalls = spawn.mock.calls;
-      expect(spawnCalls[0][1][2]).toContain('Custom Title');
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
-      // Check eval and default were configured
+      // Check title was used - get the last spawn call
+      const spawnCalls = spawn.mock.calls;
+      const lastSpawnCall = spawnCalls[spawnCalls.length - 1];
+      expect(lastSpawnCall[1][2]).toContain('Custom Title');
+
+      // Check eval and default were configured - get the last repl call
       const replStartCalls = repl.start.mock.calls;
-      const replOptions = replStartCalls[0][0];
+      const lastReplCall = replStartCalls[replStartCalls.length - 1];
+      const replOptions = lastReplCall[0];
       const mockCallback = jest.fn();
 
       // Test custom eval
@@ -781,8 +874,27 @@ describe('Windows Debugger', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
 
-    test('should complete full initialization flow', () => {
+    test('should complete full initialization flow', async () => {
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger({ title: 'Integration Test' });
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       // Verify complete flow
       expect(domain.create).toHaveBeenCalled();
@@ -795,8 +907,27 @@ describe('Windows Debugger', () => {
       expect(repl.start).toHaveBeenCalled();
     });
 
-    test('should handle default configuration paths', () => {
+    test('should handle default configuration paths', async () => {
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger({});
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       const spawnCalls = spawn.mock.calls;
       expect(spawnCalls[0][1][2]).toContain('Windows Debugger'); // default title
@@ -815,18 +946,57 @@ describe('Windows Debugger', () => {
       expect(mockCallback).toHaveBeenCalledWith(null, undefined);
     });
 
-    test('should handle port number in Node.js script', () => {
+    test('should handle port number in Node.js script', async () => {
       // Test with different port number
       mockServer.address.mockReturnValue({ port: 9999 });
+      
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(9999);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger();
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       const spawnCalls = spawn.mock.calls;
       const commandString = spawnCalls[0][1][2];
       expect(commandString).toContain('9999');
     });
 
-    test('should work with minimal valid configuration', () => {
+    test('should work with minimal valid configuration', async () => {
+      let resolveServerStart: (port: number) => void;
+      const serverStartPromise = new Promise<number>((resolve) => {
+        resolveServerStart = resolve;
+      });
+
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) setImmediate(() => {
+          (callback as () => void)();
+          resolveServerStart(12345);
+        });
+      });
+
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        return callback();
+      });
+
       windowsDebugger({ title: 'Min' });
+
+      await serverStartPromise;
+      await new Promise(resolve => setImmediate(resolve));
 
       expect(spawn).toHaveBeenCalledWith(
         'powershell.exe',
