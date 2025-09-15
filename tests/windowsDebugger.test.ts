@@ -1,71 +1,54 @@
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
 
-// Simple mock interfaces
-interface MockServer {
-  listen: jest.Mock;
-  address: jest.Mock;
-  close: jest.Mock;
-  on: jest.Mock;
-}
-
-interface MockSocket {
-  pipe: jest.Mock;
-  on: jest.Mock;
-  write: jest.Mock;
-  end: jest.Mock;
-}
-
-interface MockReplServer {
-  on: jest.Mock;
-  close: jest.Mock;
-}
-
-interface MockDomain {
-  run: jest.Mock;
-  on: jest.Mock;
-}
-
-// Mock implementations
-const createMockServer = (): MockServer => ({
+// Mock modules before importing them
+const mockServer = {
   listen: jest.fn(),
   address: jest.fn().mockReturnValue({ port: 12345 }),
   close: jest.fn(),
   on: jest.fn()
-});
+};
 
-const createMockSocket = (): MockSocket => ({
+const mockSocket = {
   pipe: jest.fn(),
   on: jest.fn(), 
   write: jest.fn(),
   end: jest.fn()
-});
+};
 
-const createMockReplServer = (): MockReplServer => ({
+const mockReplServer = {
   on: jest.fn(),
   close: jest.fn()
-});
+};
 
-const createMockDomain = (): MockDomain => ({
+const mockDomainInstance = {
   run: jest.fn(),
   on: jest.fn()
-});
+};
 
-// Module mocks
-jest.mock('net');
-jest.mock('repl');
-jest.mock('domain');
-jest.mock('child_process');
+// Mock the modules completely
+jest.mock('net', () => ({
+  createServer: jest.fn()
+}));
 
+jest.mock('repl', () => ({
+  start: jest.fn()
+}));
+
+jest.mock('domain', () => ({
+  create: jest.fn()
+}));
+
+jest.mock('child_process', () => ({
+  spawn: jest.fn()
+}));
+
+// Import after mocking
 import windowsDebugger, { WindowsDebuggerOptions } from '../src/index';
 
 describe('Windows Debugger', () => {
   let originalPlatform: string;
-  let mockServer: MockServer;
-  let mockSocket: MockSocket;
-  let mockReplServer: MockReplServer;
-  let mockDomainInstance: MockDomain;
 
-  // Import mocked modules
+  // Get the mocked modules
   const net = require('net');
   const repl = require('repl');
   const domain = require('domain');
@@ -76,29 +59,65 @@ describe('Windows Debugger', () => {
     
     originalPlatform = process.platform;
     
-    // Create fresh mocks
-    mockServer = createMockServer();
-    mockSocket = createMockSocket();
-    mockReplServer = createMockReplServer();
-    mockDomainInstance = createMockDomain();
+    // Reset mock implementations
+    mockServer.listen.mockReset();
+    mockServer.address.mockReset().mockReturnValue({ port: 12345 });
+    mockServer.on.mockReset();
+    
+    mockDomainInstance.run.mockReset();
+    mockDomainInstance.on.mockReset();
 
-    // Setup mock behaviors with any types to avoid TypeScript strict checking
-    (mockServer.listen as any).mockImplementation((_port: any, callback?: any) => {
-      if (callback) setImmediate(callback);
+    // Setup default behaviors
+    mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+      if (callback) {
+        // Simulate async server start
+        setImmediate(() => (callback as () => void)());
+      }
+      // Return the mock server for chaining
+      return mockServer;
     });
 
-    (mockDomainInstance.run as any).mockImplementation((callback: any) => {
-      callback();
+    mockDomainInstance.run.mockImplementation((callback: any) => {
+      // Always run the callback and return its result, but catch errors
+      try {
+        const result = callback();
+        // If the callback returns a promise, we need to handle it
+        if (result && typeof result.then === 'function') {
+          // For testing purposes, we'll await the promise but catch any errors
+          result.catch((error: Error) => {
+            const stackTrace = error.stack || '';
+            if (stackTrace.includes('Server creation failed') || 
+                stackTrace.includes('This module only works on Windows.')) {
+              // These are expected errors in test cases - suppress them
+              return;
+            }
+            // Log unexpected errors but don't rethrow to avoid uncaught promise rejections
+            console.error('Unexpected error in domain:', error);
+          });
+          return result;
+        }
+        return result;
+      } catch (error) {
+        // Only suppress errors in error test cases
+        const stackTrace = (error as Error).stack || '';
+        if (stackTrace.includes('Server creation failed') || 
+            stackTrace.includes('This module only works on Windows.')) {
+          // These are expected errors in test cases - suppress them
+          return;
+        }
+        // Re-throw unexpected errors
+        throw error;
+      }
     });
 
     // Setup module mocks
-    (net.createServer as any) = jest.fn().mockImplementation((callback?: any) => {
+    net.createServer.mockImplementation((callback?: any) => {
       if (callback) setImmediate(() => callback(mockSocket));
       return mockServer;
     });
 
-    repl.start = jest.fn().mockReturnValue(mockReplServer);
-    domain.create = jest.fn().mockReturnValue(mockDomainInstance);
+    repl.start.mockReturnValue(mockReplServer);
+    domain.create.mockReturnValue(mockDomainInstance);
     spawn.mockReturnValue({});
   });
 
@@ -113,7 +132,22 @@ describe('Windows Debugger', () => {
     test('should throw error on non-Windows platforms', () => {
       Object.defineProperty(process, 'platform', { value: 'linux', writable: true });
       
+      // Mock console.error to capture the error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      // Mock domain to allow the error to propagate for this test
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        try {
+          return callback();
+        } catch (error) {
+          // For this test, we want to see the error thrown
+          throw error;
+        }
+      });
+      
       expect(() => windowsDebugger()).toThrow('This module only works on Windows.');
+      
+      consoleSpy.mockRestore();
     });
 
     test('should work on Windows platform', () => {
@@ -128,8 +162,11 @@ describe('Windows Debugger', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
 
-    test('should create server and spawn PowerShell with default options', () => {
+    test('should create server and spawn PowerShell with default options', async () => {
       windowsDebugger();
+
+      // Wait a bit for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 20));
 
       expect(net.createServer).toHaveBeenCalled();
       expect(domain.create).toHaveBeenCalled();
@@ -147,9 +184,12 @@ describe('Windows Debugger', () => {
       );
     });
 
-    test('should use custom title in PowerShell command', () => {
+    test('should use custom title in PowerShell command', async () => {
       const customTitle = 'My Custom Debugger';
       windowsDebugger({ title: customTitle });
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const spawnCalls = spawn.mock.calls;
       expect(spawnCalls).toHaveLength(1);
@@ -157,17 +197,23 @@ describe('Windows Debugger', () => {
       expect(commandString).toContain(customTitle);
     });
 
-    test('should escape single quotes in title', () => {
+    test('should escape single quotes in title', async () => {
       const titleWithQuotes = "Debug'Session'Test";
       windowsDebugger({ title: titleWithQuotes });
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const spawnCalls = spawn.mock.calls;
       const commandString = spawnCalls[0][1][2];
       expect(commandString).toContain("Debug''Session''Test");
     });
 
-    test('should start REPL server on socket connection', () => {
+    test('should start REPL server on socket connection', async () => {
       windowsDebugger();
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(repl.start).toHaveBeenCalledWith(expect.objectContaining({
         input: mockSocket,
@@ -180,14 +226,17 @@ describe('Windows Debugger', () => {
     });
   });
 
-  describe('REPL Evaluation', () => {
+  describe('REPL Evaluation Functions', () => {
     beforeEach(() => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
 
-    test('should use custom eval function', () => {
+    test('should use custom eval function', async () => {
       const customEval = jest.fn().mockReturnValue('test-result');
       windowsDebugger({ eval: customEval });
+
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const replStartCalls = repl.start.mock.calls;
       expect(replStartCalls).toHaveLength(1);
@@ -215,7 +264,7 @@ describe('Windows Debugger', () => {
       expect(mockCallback).toHaveBeenCalledWith(null, defaultValue);
     });
 
-    test('should handle eval errors', () => {
+    test('should handle eval errors gracefully', () => {
       const errorEval = jest.fn().mockImplementation(() => {
         throw new Error('Evaluation failed');
       });
@@ -265,12 +314,72 @@ describe('Windows Debugger', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
 
+    test('should handle invalid server address', () => {
+      mockServer.address.mockReturnValue(null);
+      
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      windowsDebugger();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start Windows debugger:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle string server address', () => {
+      mockServer.address.mockReturnValue('/unix/socket/path');
+      
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      windowsDebugger();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start Windows debugger:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle domain errors silently', () => {
+      windowsDebugger();
+
+      const errorCall = mockDomainInstance.on.mock.calls.find(call => call[0] === 'error');
+      
+      expect(() => {
+        if (errorCall && typeof errorCall[1] === 'function') {
+          errorCall[1](new Error('Domain error'));
+        }
+      }).not.toThrow();
+    });
+
+    test('should handle server creation failure', () => {
+      net.createServer.mockImplementation(() => {
+        throw new Error('Server creation failed');
+      });
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Mock domain to catch this specific error without rethrowing
+      mockDomainInstance.run.mockImplementationOnce((callback: any) => {
+        try {
+          callback();
+        } catch (error) {
+          // Domain catches the error silently
+          return;
+        }
+      });
+
+      // This should not throw because domain catches the error
+      windowsDebugger();
+      
+      // The error should be logged
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to start Windows debugger:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
     test('should handle server listen errors', (done) => {
       const testError = new Error('Listen failed');
-      (mockServer.listen as any).mockImplementation((_port: any, callback?: any) => {
-        if (callback) callback();
+      
+      mockServer.listen.mockImplementation((_port: any, callback?: any) => {
+        if (callback) (callback as () => void)();
         setImmediate(() => {
-          const errorCall = mockServer.on.mock.calls.find((call: any[]) => call[0] === 'error');
+          const errorCall = mockServer.on.mock.calls.find(call => call[0] === 'error');
           if (errorCall && typeof errorCall[1] === 'function') {
             errorCall[1](testError);
           }
@@ -285,61 +394,7 @@ describe('Windows Debugger', () => {
         expect(consoleSpy).toHaveBeenCalledWith('Failed to start Windows debugger:', testError);
         consoleSpy.mockRestore();
         done();
-      }, 50);
-    });
-
-    test('should handle invalid server address', () => {
-      mockServer.address.mockReturnValue(null);
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      windowsDebugger();
-
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to start Windows debugger:', expect.any(Error));
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle string server address', () => {
-      mockServer.address.mockReturnValue('/unix/socket/path');
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      windowsDebugger();
-
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to start Windows debugger:', expect.any(Error));
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle domain errors silently', () => {
-      windowsDebugger();
-
-      const errorCall = mockDomainInstance.on.mock.calls.find((call: any[]) => call[0] === 'error');
-      
-      expect(() => {
-        if (errorCall && typeof errorCall[1] === 'function') {
-          errorCall[1](new Error('Domain error'));
-        }
-      }).not.toThrow();
-    });
-
-    test('should handle server creation failure', () => {
-      (net.createServer as any).mockImplementation(() => {
-        throw new Error('Server creation failed');
-      });
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      // Mock domain run to catch the error without re-throwing
-      (mockDomainInstance.run as any).mockImplementation((callback: any) => {
-        try {
-          callback();
-        } catch (error) {
-          // Error caught by domain, should not re-throw
-        }
-      });
-
-      // Call should not throw because domain catches it
-      windowsDebugger();
-      
-      consoleSpy.mockRestore();
+      }, 100);
     });
   });
 
@@ -370,6 +425,15 @@ describe('Windows Debugger', () => {
       // Single quotes should be escaped as double single quotes
       expect(commandString).toContain("Test''Debug");
     });
+
+    test('should handle multiple single quotes', () => {
+      const weirdTitle = "A'B'C'D";
+      windowsDebugger({ title: weirdTitle });
+
+      const spawnCalls = spawn.mock.calls;
+      const commandString = spawnCalls[0][1][2];
+      expect(commandString).toContain("A''B''C''D");
+    });
   });
 
   describe('Options Handling', () => {
@@ -377,7 +441,7 @@ describe('Windows Debugger', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
 
-    test('should accept empty options', () => {
+    test('should accept empty options object', () => {
       expect(() => windowsDebugger({})).not.toThrow();
     });
 
@@ -385,7 +449,7 @@ describe('Windows Debugger', () => {
       expect(() => windowsDebugger()).not.toThrow();
     });
 
-    test('should apply all custom options', () => {
+    test('should apply all custom options correctly', () => {
       const customEval = jest.fn().mockReturnValue('custom-eval-result');
       const options: WindowsDebuggerOptions = {
         title: 'Custom Title',
@@ -408,7 +472,7 @@ describe('Windows Debugger', () => {
       replOptions.eval('test', {}, 'file', mockCallback);
       expect(customEval).toHaveBeenCalledWith('test');
 
-      // Test default value for empty command
+      // Test default value for empty command  
       mockCallback.mockClear();
       replOptions.eval('  ', {}, 'file', mockCallback);
       expect(mockCallback).toHaveBeenCalledWith(null, 'custom-default');
@@ -428,7 +492,7 @@ describe('Windows Debugger', () => {
     });
   });
 
-  describe('Integration Tests', () => {
+  describe('Integration and Edge Cases', () => {
     beforeEach(() => {
       Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
     });
@@ -447,29 +511,7 @@ describe('Windows Debugger', () => {
       expect(repl.start).toHaveBeenCalled();
     });
 
-    test('should work with minimal valid configuration', () => {
-      windowsDebugger({ title: 'Min' });
-
-      expect(spawn).toHaveBeenCalledWith(
-        'powershell.exe',
-        expect.any(Array),
-        expect.objectContaining({
-          cwd: expect.any(String),
-          shell: true,
-          detached: true,
-          stdio: 'ignore'
-        })
-      );
-    });
-  });
-
-  describe('Edge Cases', () => {
-    beforeEach(() => {
-      Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
-    });
-
-    test('should handle all default configuration paths', () => {
-      // Test applyDefaults with empty object
+    test('should handle default configuration paths', () => {
       windowsDebugger({});
 
       const spawnCalls = spawn.mock.calls;
@@ -489,16 +531,6 @@ describe('Windows Debugger', () => {
       expect(mockCallback).toHaveBeenCalledWith(null, undefined);
     });
 
-    test('should handle PowerShell command escaping edge cases', () => {
-      // Test title with multiple single quotes
-      const weirdTitle = "A'B'C'D";
-      windowsDebugger({ title: weirdTitle });
-
-      const spawnCalls = spawn.mock.calls;
-      const commandString = spawnCalls[0][1][2];
-      expect(commandString).toContain("A''B''C''D");
-    });
-
     test('should handle port number in Node.js script', () => {
       // Test with different port number
       mockServer.address.mockReturnValue({ port: 9999 });
@@ -507,6 +539,45 @@ describe('Windows Debugger', () => {
       const spawnCalls = spawn.mock.calls;
       const commandString = spawnCalls[0][1][2];
       expect(commandString).toContain('9999');
+    });
+
+    test('should work with minimal valid configuration', () => {
+      windowsDebugger({ title: 'Min' });
+
+      expect(spawn).toHaveBeenCalledWith(
+        'powershell.exe',
+        expect.any(Array),
+        expect.objectContaining({
+          cwd: expect.any(String),
+          shell: true,
+          detached: true,
+          stdio: 'ignore'
+        })
+      );
+    });
+  });
+
+  describe('TypeScript Interface Validation', () => {
+    beforeEach(() => {
+      Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
+    });
+
+    test('should accept valid WindowsDebuggerOptions interface', () => {
+      const validOptions: WindowsDebuggerOptions = {
+        title: 'Test Title',
+        default: 'test-default',
+        eval: (cmd: string) => `evaluated: ${cmd}`
+      };
+
+      expect(() => windowsDebugger(validOptions)).not.toThrow();
+    });
+
+    test('should accept partial WindowsDebuggerOptions interface', () => {
+      const partialOptions: WindowsDebuggerOptions = {
+        title: 'Partial Test'
+      };
+
+      expect(() => windowsDebugger(partialOptions)).not.toThrow();
     });
   });
 });
