@@ -1,6 +1,28 @@
 # Windows Debugger
 
-A lightweight Node.js REPL debugger for **Windows** that spawns a PowerShell window and connects to your running process for live debugging.
+A lightweight debugger for **Windows** that spawns a PowerShell window and connects to your running process for live debugging.
+
+## 🚨 **IMPORTANT: Two Versions Available**
+
+This repository now contains **both** implementations:
+
+### 🟦 **TypeScript/Node.js Version** (Original)
+- **Location**: Root directory (`src/index.ts`, `package.json`)
+- **Runtime**: Node.js with TypeScript
+- **Usage**: `npm install windows-debugger`
+- **Documentation**: This README below
+
+### 🟣 **C# Version** (New)
+- **Location**: C# project files (`WindowsDebugger.sln`, `src/WindowsDebugger.csproj`)
+- **Runtime**: .NET 8.0+
+- **Usage**: `dotnet add package WindowsDebugger` 
+- **Documentation**: [README-CSharp.md](./README-CSharp.md)
+
+Both versions provide identical functionality but target different runtime environments.
+
+---
+
+## Original TypeScript/Node.js Implementation
 
 **✨ Now with TypeScript support!** This module has been fully migrated to TypeScript for better type safety and developer experience.
 
