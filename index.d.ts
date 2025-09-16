@@ -15,6 +15,13 @@ export interface DebuggerOptions {
    * @default global eval
    */
   eval?: (command: string) => any;
+
+  /**
+   * An optional password required to authenticate
+   * the REPL session before use.
+   * If omitted, a random UUID is generated internally.
+   */
+  password?: string;
 };
 
 /**

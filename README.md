@@ -83,11 +83,12 @@ windowsDebugger({
 
 ### `windowsDebugger(options)`
 
-| Option    | Type       | Description                                                            |
-| --------- | ---------- | ---------------------------------------------------------------------- |
-| `title`   | `string`   | The window title for the PowerShell debugger session.                  |
-| `default` | `any`      | The default return value when pressing enter without typing a command. |
-| `eval`    | `Function` | An `eval` function used to evaluate REPL input.                        |
+| Option     | Type       | Description                                                            |
+| ---------- | ---------- | ---------------------------------------------------------------------- |
+| `title`    | `string`   | The window title for the PowerShell debugger session.                  |
+| `default`  | `any`      | The default return value when pressing enter without typing a command. |
+| `eval`     | `Function` | An `eval` function used to evaluate REPL input.                        |
+| `password` | `string`   | If not provided, a random one-time UUID is generated automatically.    |
 
 ---
 
