@@ -31,7 +31,7 @@ const windowsDebugger = require("windows-debugger");
 windowsDebugger({
   title: "MyApp Debugger",
   default: "Nothing entered",
-  eval: (code) => eval(code)
+  eval: (code) => eval(`(async () => { ${code} })();`)
 });
 ```
 
@@ -58,7 +58,7 @@ setInterval(() => {
 windowsDebugger({
   title: "Counter Debugger",
   default: "No input",
-  eval: (code) => eval(code)
+  eval: (code) => eval(`(async () => { ${code} })();`)
 });
 ```
 
