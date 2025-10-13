@@ -19,9 +19,9 @@ module.exports = ({ title = "Windows Debugger", default: defaultValue, eval: eva
         output: socket,
         terminal: false,
         prompt: "> ",
-        eval: async (command, _, __, callback) => {
+        eval: (command, _, __, callback) => {
           try {
-            callback(null, (command.trim()) ? await evalFunction(command) : defaultValue);
+            callback(null, (command.trim()) ? evalFunction(command) : defaultValue);
           } catch (error) {
             callback(error);
           };
