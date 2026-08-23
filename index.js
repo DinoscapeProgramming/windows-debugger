@@ -7,7 +7,12 @@ const childProcess = require("child_process");
 
 const replDomain = domain.create();
 
-module.exports = ({ title = "Windows Debugger", default: defaultValue, eval: evalFunction = eval, password = crypto.randomUUID() } = {}) => replDomain.run(() => {
+module.exports = ({
+  title = "Windows Debugger",
+  default: defaultValue,
+  eval: evalFunction = eval,
+  password = crypto.randomUUID()
+} = {}) => replDomain.run(() => {
   console.assert(process.platform === "win32", "This module only works on Windows.");
 
   const server = net.createServer((socket) => {
@@ -19,6 +24,7 @@ module.exports = ({ title = "Windows Debugger", default: defaultValue, eval: eva
         output: socket,
         terminal: false,
         prompt: "> ",
+
         eval: (command, _, __, callback) => {
           try {
             callback(null, (command.trim()) ? evalFunction(command) : defaultValue);
@@ -26,6 +32,7 @@ module.exports = ({ title = "Windows Debugger", default: defaultValue, eval: eva
             callback(error);
           };
         },
+
         writer: (output) => util.inspect(output, { colors: true, depth: null })
       });
     });
@@ -44,14 +51,12 @@ module.exports = ({ title = "Windows Debugger", default: defaultValue, eval: eva
       `.replace(/\n/g, " ").replace(/'/g, "''")}'; exit`
     ], {
       cwd: process.cwd(),
-      shell: true,
       detached: true,
       stdio: "ignore",
       env: {
         ...process.env,
-        ...{
-          REPL_PASSWORD: password
-        }
+
+        REPL_PASSWORD: password
       }
     });
   });

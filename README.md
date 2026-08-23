@@ -2,7 +2,7 @@
 
 A lightweight Node.js REPL debugger for **Windows** that spawns a PowerShell window and connects to your running process for live debugging.
 
-![Demo](https://raw.githubusercontent.com/DinoscapeProgramming/windows-debugger/refs/heads/master/assets/Demo.gif)
+![Demo](https://raw.githubusercontent.com/DinoscapeProgramming/windows-debugger/refs/heads/master/assets/demo.gif)
 
 ## ✨ Features
 
